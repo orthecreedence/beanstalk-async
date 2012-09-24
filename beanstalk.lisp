@@ -107,10 +107,7 @@
 
 (defun beanstalk-command (command &key args finish-cb fail-cb data conn (read-timeout 5) (host "127.0.0.1") (port 11300))
   "Send a command to beanstalk asynchronously. If a connection is passed, it
-   uses that instead of opening a new one. If this function is called without an
-   event loop being initialized, it will start the event loop and block, so be
-   sure to have your event loop started beforehand, unless this behavior is
-   desired."
+   uses that instead of opening a new one."
   ;; build the command
   (let* ((data (if (stringp data)
                    (flexi-streams:string-to-octets data :external-format :utf8)
