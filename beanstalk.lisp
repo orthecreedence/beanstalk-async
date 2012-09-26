@@ -95,7 +95,7 @@
     (lambda (data)
       (let ((string (if (stringp data)
                         data
-                        (flexi-streams:octets-to-string data :external-format :utf8))))
+                        (babel:octets-to-string data :encoding :utf-8))))
         (setf str (concatenate 'string str string)))
       (let ((finishedp (multiple-value-list (response-finished-p str))))
         (when (car finishedp)
@@ -110,7 +110,7 @@
    uses that instead of opening a new one."
   ;; build the command
   (let* ((data (if (stringp data)
-                   (flexi-streams:string-to-octets data :external-format :utf8)
+                   (babel:string-to-octets data :encoding :utf-8)
                    data))
          (args (if data
                    (append args (list (length data)))
@@ -119,9 +119,9 @@
                 (format s "~a" (string-downcase (string command)))
                 (dolist (arg args)
                   (format s " ~a" arg))))
-         (cmd (flexi-streams:string-to-octets
+         (cmd (babel:string-to-octets
                 (concatenate 'string cmd (newlineize "~%"))
-                :external-format :utf8)))
+                :encoding :utf-8)))
     (when data
       ;; if we're sending data, provide the <bytes> variable and append the data
       (let* ((cmd-length (length cmd))
