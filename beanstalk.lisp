@@ -33,10 +33,11 @@
                          unknown_command)
   "Defines the errors beanstalk can return (checked when processing headers).")
 
-(define-condition out-of-memory (error) ())
-(define-condition internal-error (error) ())
-(define-condition bad-format (error) ())
-(define-condition unknown-command (error) ())
+(define-condition beanstalk-error (error) ())
+(define-condition out-of-memory (beanstalk-error) ())
+(define-condition internal-error (beanstalk-error) ())
+(define-condition bad-format (beanstalk-error) ())
+(define-condition unknown-command (beanstalk-error) ())
 
 (defun newlineize (string)
   "Replace instances of ~% (format's newline) with \r\n. Makes creating 
@@ -105,7 +106,7 @@
 (defun parse-beanstalk-yaml (str)
   nil)
 
-(defun beanstalk-command (command &key args finish-cb fail-cb data conn (read-timeout 5) (host "127.0.0.1") (port 11300))
+(defun beanstalk-command (command &key args finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
   "Send a command to beanstalk asynchronously. If a connection is passed, it
    uses that instead of opening a new one."
   ;; build the command
@@ -137,18 +138,22 @@
         (setf cmd bytes)))
     ;; now make a beanstalk parser, which can recieve data in multiple chunks,
     ;; and run our command asynchronously.
-    (let ((parser (make-beanstalk-parser)))
-      (cl-async:tcp-async-send
-         host port
-         cmd
-         (lambda (bev data)
-           (multiple-value-bind (finishedp header response) (funcall parser data)
-             (when (and finishedp finish-cb)
-               ;; disable the bufferevent timeout so we can process the command
-               (le::bufferevent-disable bev (logior le::+ev-read+ le::+ev-write+))
-               ;; we got a full response, send it off to the finish cb
-               (funcall finish-cb bev command header response))))
-         fail-cb
-         :read-timeout read-timeout
-         :socket conn))))
+    (let* ((parser (make-beanstalk-parser))
+           (read-cb (lambda (socket data)
+                      (multiple-value-bind (finishedp header response) (funcall parser data)
+                        (when (and finishedp finish-cb)
+                          ;; disable the bufferevent timeout so we can process the command
+                          (as:disable-socket socket :read t :write t)
+                          ;; we got a full response, send it off to the finish cb
+                          (funcall finish-cb socket command header response))))))
+      (if socket
+          (as:write-socket-data socket cmd
+                                :read-cb read-cb
+                                :event-cb event-cb
+                                :write-cb write-cb)
+          (as:tcp-send host port
+                       cmd
+                       read-cb event-cb
+                       :read-timeout read-timeout
+                       :write-cb write-cb)))))
 

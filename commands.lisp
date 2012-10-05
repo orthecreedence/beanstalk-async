@@ -17,14 +17,15 @@
      (defun ,fn-name
             ,(append args
                      (when sends-data '(data))
-                     '(&key finish-cb fail-cb conn (read-timeout 5) (host "127.0.0.1") (port 11300)))
+                     '(&key finish-cb event-cb write-cb socket (read-timeout 5) (host "127.0.0.1") (port 11300)))
        (let ((args (list ,@args)))
          (beanstalk-command (string-downcase (string (find-command-alias ',fn-name)))
                             :args args
                             ,@(when sends-data '(:data data))
                             :finish-cb finish-cb
-                            :fail-cb fail-cb
-                            :conn conn
+                            :event-cb event-cb
+                            :write-cb write-cb
+                            :socket socket
                             :read-timeout read-timeout
                             :host host
                             :port port)))
