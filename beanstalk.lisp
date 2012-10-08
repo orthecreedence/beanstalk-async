@@ -39,6 +39,16 @@
 (define-condition bad-format (beanstalk-error) ())
 (define-condition unknown-command (beanstalk-error) ())
 
+(defun append-array (arr1 arr2)
+  "Create an array, made up of arr1 followed by arr2."
+  (let ((arr1-length (length arr1))
+        (arr2-length (length arr2)))
+    (let ((arr (make-array (+ arr1-length arr2-length)
+                           :element-type (array-element-type arr1))))
+      (replace arr arr1 :start1 0)
+      (replace arr arr2 :start1 arr1-length)
+      arr)))
+
 (defun newlineize (string)
   "Replace instances of ~% (format's newline) with \r\n. Makes creating 
    beanstalkd strings a bit easier."
@@ -48,9 +58,10 @@
           (aref string (1+ pos)) #\newline))
   string)
 
-(defun parse-header (str)
+(defun parse-header (byte-array)
   "Parse the header of a beanstalk response."
-  (let ((nl (search (vector #\return #\newline) str)))
+  (let* ((str (babel:octets-to-string byte-array :encoding :utf-8))
+         (nl (search (vector #\return #\newline) str)))
     (when nl
       (let* ((header (subseq str 0 nl))
              (parts (split-sequence:split-sequence #\space header)))
@@ -67,43 +78,42 @@
                                                     (read-from-string val)))))
                 (values result (+ nl 2)))
               (let ((err (find-if (lambda (h)
-                                      (string= (string h) header))
-                                    *errors*)))
+                                    (string= (string h) header))
+                                  *errors*)))
                 (case err
                   (out_of_memory (error 'out-of-memory))
                   (internal_error (error 'internal-error))
                   (bad_format (error 'bad-format))
                   (unknown_command (error 'unknown-command))))))))))
 
-(defun response-finished-p (str)
+(defun response-finished-p (byte-array)
   "Check if a full response has been recieved from beanstalk. Since responses
    can come back in chunks, it makes sense to have a function that can tell if
    all chunks have een recieved."
-  (multiple-value-bind (header offset) (parse-header str)
+  (multiple-value-bind (header offset) (parse-header byte-array)
     (when header
       (if (getf header :bytes)
-          (when (<= (getf header :bytes) (- (length str) offset))
+          (when (<= (getf header :bytes) (- (length byte-array) offset))
             (values t
                     header
-                    (subseq str offset (+ offset (getf header :bytes)))))
+                    (subseq byte-array offset (+ offset (getf header :bytes)))))
           (values t header)))))
 
 (defun make-beanstalk-parser ()
   "Return a funciton that concatenates responses from various async operations
    until a full beanstalk response has been parsed, at which point the headers
    of the response and the response itself is returned."
-  (let ((str ""))
+  (let ((data-arr nil))
     (lambda (data)
-      (let ((string (if (stringp data)
-                        data
-                        (babel:octets-to-string data :encoding :utf-8))))
-        (setf str (concatenate 'string str string)))
-      (let ((finishedp (multiple-value-list (response-finished-p str))))
+      (setf data-arr (if data-arr
+                         (append-array data-arr data)
+                         data))
+      (let ((finishedp (multiple-value-list (response-finished-p data-arr))))
         (when (car finishedp)
-          (setf str ""))
+          (setf data-arr nil))
         (apply #'values finishedp)))))
 
-(defun parse-beanstalk-yaml (str)
+(defun parse-beanstalk-yaml (byte-array)
   nil)
 
 (defun beanstalk-command (command &key args finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
