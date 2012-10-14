@@ -31,7 +31,7 @@ default to `nil` (no timeout).
 - `:host` - The host to send the command to. Ignored if `:socket` is given.
 - `:port` - The port to send the command to. Ignored if `:socket` is given.
 
-### Command reference
+### Command/function reference
 - [beanstalk-command](#beanstalk-command)
 - [put](#put)
 - [use](#use)
@@ -57,6 +57,7 @@ default to `nil` (no timeout).
 - [list-tubes-watched](#list-tubes-watched)
 - [quit](#quit)
 - [pause-tube](#pause-tube)
+- [parse-beanstalk-yaml](#parse-beanstalk-yaml)
 
 ### beanstalk-command
 The low-level command that all other commands are built on top of. Supports
@@ -414,6 +415,21 @@ Pause a tube for the specified number of seconds.
 
 ;; finish-cb definition
 (lambda (socket status) ...)
+```
+
+### parse-beanstalk-yaml
+Not a beanstalkd command, but if running raw commands via
+[beanstalk-command](#beanstalk-command), this will let you parse the YAML
+returned by some commands. Takes a string, so convert the data byte-array to a
+string before giving it to `parse-beanstalk-yaml`.
+
+It is horribly simple, and *only* geared for parsing one-level YAML structures.
+It cannot deal with more complicated structures. It returns either a plist for
+key/value data, or a list for array data.
+
+```common-lisp
+;; definition
+(parse-beanstalk-yaml str)
 ```
 
 Notes
