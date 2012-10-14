@@ -68,6 +68,30 @@
           (aref string (1+ pos)) #\newline))
   string)
 
+(defun parse-beanstalk-yaml (str)
+  "Turns beanstalk's YAML into a getf'able plist (or just a list, depending on
+   the response)."
+  (let* ((has-header-p (eq (search "---" str) 0))
+         (yaml (if has-header-p
+                   (subseq str (1+ (position #\newline str)))
+                   str))
+         (data nil))
+    (let ((lines (split-sequence:split-sequence #\newline yaml)))
+      (dolist (line lines)
+        (unless (zerop (length line))
+          (let ((split (search ": " line))
+                (array-begin (search "- " line)))
+            (cond
+              (split
+               (let ((key (read-from-string (concatenate 'string ":" (subseq line 0 split))))
+                     (val (read-from-string (subseq line (1+ split)))))
+                 (when (and key val)
+                   (push val data)
+                   (push key data))))
+              ((eq array-begin 0)
+               (push (subseq line 2) data)))))))
+    data))
+
 (defun parse-header (byte-array)
   "Parse the header of a beanstalk response."
   (let* ((str (babel:octets-to-string byte-array :encoding :utf-8))
@@ -122,29 +146,6 @@
         (when (car finishedp)
           (setf data-arr nil))
         (apply #'values finishedp)))))
-
-(defun parse-beanstalk-yaml (str)
-  "Turns beanstalk's YAML into a getf'able plist."
-  (let* ((has-header-p (eq (search "---" str) 0))
-         (yaml (if has-header-p
-                   (subseq str (1+ (position #\newline str)))
-                   str))
-         (data nil))
-    (let ((lines (split-sequence:split-sequence #\newline yaml)))
-      (dolist (line lines)
-        (unless (zerop (length line))
-          (let ((split (search ": " line))
-                (array-begin (search "- " line)))
-            (cond
-              (split
-               (let ((key (read-from-string (concatenate 'string ":" (subseq line 0 split))))
-                     (val (read-from-string (subseq line (1+ split)))))
-                 (when (and key val)
-                   (push val data)
-                   (push key data))))
-              ((eq array-begin 0)
-               (push (subseq line 2) data)))))))
-    data))
 
 (defun beanstalk-command (command &key args format-cb possible-errors finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
   "Send a command to beanstalk asynchronously. If a connection is passed, it
