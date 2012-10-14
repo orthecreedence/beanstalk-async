@@ -81,7 +81,7 @@
 (defcommand reserve nil
             :format-cb #'format-with-status-id-data
             :default-read-timeout nil)
-(defcommand reserve-with-timeout (seconds)
+(defcommand reserve-with-timeout (timeout)
             :format-cb #'format-with-status-id-data
             :default-read-timeout nil)
 (defcommand del (id) :format-cb #'format-with-status)

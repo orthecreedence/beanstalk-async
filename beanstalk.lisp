@@ -147,7 +147,7 @@
           (setf data-arr nil))
         (apply #'values finishedp)))))
 
-(defun beanstalk-command (command &key args format-cb possible-errors finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
+(defun beanstalk-command (command &key args format-cb finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
   "Send a command to beanstalk asynchronously. If a connection is passed, it
    uses that instead of opening a new one."
   ;; build the command
