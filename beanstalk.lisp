@@ -6,7 +6,7 @@
 (in-package :beanstalk-async)
 
 (defparameter *headers* '((inserted id)
-                          (buried id)
+                          (buried)
                           (expected_crlf)
                           (job_too_big)
                           (draining)
@@ -38,6 +38,16 @@
 (define-condition internal-error (beanstalk-error) ())
 (define-condition bad-format (beanstalk-error) ())
 (define-condition unknown-command (beanstalk-error) ())
+
+(defun convert-to-keyword (symbol)
+  "Converts a symbol (ie TIMED_OUT) to :timed-out (note the _ to - replacement)"
+  ;; no doubt, there is a better way to do this...
+  (let ((str (string symbol)))
+    (loop for i from 0
+          for c across str do
+      (when (char= c #\_)
+        (setf (aref str i) #\-)))
+    (read-from-string (format nil ":~a" str))))
 
 (defun append-array (arr1 arr2)
   "Create an array, made up of arr1 followed by arr2."
@@ -113,10 +123,30 @@
           (setf data-arr nil))
         (apply #'values finishedp)))))
 
-(defun parse-beanstalk-yaml (byte-array)
-  nil)
+(defun parse-beanstalk-yaml (str)
+  "Turns beanstalk's YAML into a getf'able plist."
+  (let* ((has-header-p (eq (search "---" str) 0))
+         (yaml (if has-header-p
+                   (subseq str (1+ (position #\newline str)))
+                   str))
+         (data nil))
+    (let ((lines (split-sequence:split-sequence #\newline yaml)))
+      (dolist (line lines)
+        (unless (zerop (length line))
+          (let ((split (search ": " line))
+                (array-begin (search "- " line)))
+            (cond
+              (split
+               (let ((key (read-from-string (concatenate 'string ":" (subseq line 0 split))))
+                     (val (read-from-string (subseq line (1+ split)))))
+                 (when (and key val)
+                   (push val data)
+                   (push key data))))
+              ((eq array-begin 0)
+               (push (subseq line 2) data)))))))
+    data))
 
-(defun beanstalk-command (command &key args finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
+(defun beanstalk-command (command &key args format-cb possible-errors finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
   "Send a command to beanstalk asynchronously. If a connection is passed, it
    uses that instead of opening a new one."
   ;; build the command
@@ -154,8 +184,11 @@
                         (when (and finishedp finish-cb)
                           ;; disable the bufferevent timeout so we can process the command
                           (as:disable-socket socket :read t :write t)
-                          ;; we got a full response, send it off to the finish cb
-                          (funcall finish-cb socket command header response))))))
+                          ;; we got a full response, either format it or send it
+                          ;; straight to the finish-cb
+                          (if format-cb
+                              (funcall format-cb finish-cb socket command header response)
+                              (funcall finish-cb socket (list :header header :data response))))))))
       (if socket
           (as:write-socket-data socket cmd
                                 :read-cb read-cb
