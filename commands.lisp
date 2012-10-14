@@ -11,13 +11,13 @@
         (cdr alias)
         fn-name)))
 
-(defmacro defcommand (fn-name args &key sends-data format-cb)
+(defmacro defcommand (fn-name args &key sends-data format-cb (default-read-timeout 5))
   "Makes creating new commands stupid easy."
   `(progn
      (defun ,fn-name
             ,(append args
                      (when sends-data '(data))
-                     '(&key finish-cb event-cb write-cb socket (read-timeout 5) (host "127.0.0.1") (port 11300)))
+                     `(&key finish-cb event-cb write-cb socket (read-timeout ,default-read-timeout) (host "127.0.0.1") (port 11300)))
        (let ((args (list ,@args)))
          (beanstalk-command (string-downcase (string (find-command-alias ',fn-name)))
                             :args args
@@ -78,8 +78,12 @@
             :sends-data t
             :format-cb #'format-with-status-id)
 (defcommand use (tube) :format-cb #'format-with-status)
-(defcommand reserve nil :format-cb #'format-with-status-id-data)
-(defcommand reserve-with-timeout (seconds) :format-cb #'format-with-status-id-data)
+(defcommand reserve nil
+            :format-cb #'format-with-status-id-data
+            :default-read-timeout nil)
+(defcommand reserve-with-timeout (seconds)
+            :format-cb #'format-with-status-id-data
+            :default-read-timeout nil)
 (defcommand del (id) :format-cb #'format-with-status)
 (defcommand release (id priority delay) :format-cb #'format-with-status)
 (defcommand bury (id priority) :format-cb #'format-with-status)

@@ -191,10 +191,12 @@
                               (funcall format-cb finish-cb socket command header response)
                               (funcall finish-cb socket (list :header header :data response))))))))
       (if socket
-          (as:write-socket-data socket cmd
-                                :read-cb read-cb
-                                :event-cb event-cb
-                                :write-cb write-cb)
+          (progn
+            (as:set-socket-timeouts socket read-timeout nil)
+            (as:write-socket-data socket cmd
+                                  :read-cb read-cb
+                                  :event-cb event-cb
+                                  :write-cb write-cb))
           (as:tcp-send host port
                        cmd
                        read-cb event-cb
