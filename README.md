@@ -27,7 +27,7 @@ default to `nil` (no timeout).
 - `:host` - The host to send the command to. Ignored if `:socket` is given.
 - `:port` - The port to send the command to. Ignored if `:socket` is given.
 
-## Reference
+#### Command reference
 - [beanstalk-command](#beanstalk-command)
 - [put](#put)
 - [use](#use)
