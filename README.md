@@ -1,5 +1,5 @@
-beanstalk-async - Asynchronous beanstalkd driver for Common Lisp
-================================================================
+beanstalk-async
+===============
 This is a driver to communication asynchronously with a beastalkd server in
 Common Lisp. It requires [cl-async](https://github.com/orthecreedence/cl-async).
 
