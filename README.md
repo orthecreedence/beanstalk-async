@@ -27,7 +27,7 @@ default to `nil` (no timeout).
 - `:host` - The host to send the command to. Ignored if `:socket` is given.
 - `:port` - The port to send the command to. Ignored if `:socket` is given.
 
-#### Command reference
+### Command reference
 - [beanstalk-command](#beanstalk-command)
 - [put](#put)
 - [use](#use)
@@ -113,7 +113,7 @@ Use a tube.
 ```
 
 ### reserve
-Reserve an item from the queue. Doesn't run its `finish-cb` until a message is
+Reserve an item from the queue. Doesn't run its `finish-cb` until a job is
 available on the watched tubes.
 
 ```common-lisp
@@ -126,14 +126,14 @@ available on the watched tubes.
                ...))
 
 ;; finish-cb definition
-(lambda (socket status id data) ...)
+(lambda (socket status job-id job-data) ...)
 ```
 
 `data` in the `format-cb` is a byte-array, and can be converted to a string via
 `babel:octets-to-string`.
 
 ### reserve-with-timeout
-Reserve an item from the queue, but if a message doesn't become available on the
+Reserve an item from the queue, but if a job doesn't become available on the
 watched tubes before `timeout` seconds passes, this will call `finish-cb` with
 `:timed-out` in the status.
 
@@ -147,14 +147,14 @@ watched tubes before `timeout` seconds passes, this will call `finish-cb` with
                ...))
 
 ;; finish-cb definition
-(lambda (socket status id data) ...)
+(lambda (socket status job-id job-data) ...)
 ```
 
 `data` in the `format-cb` is a byte-array, and can be converted to a string via
 `babel:octets-to-string`.
 
 ### del
-Delete a message in the used tube.
+Delete a job in the used tube.
 
 ```common-lisp
 ;; definition
@@ -177,7 +177,7 @@ Delete a message in the used tube.
 ```
 
 ### release
-Release a job back inot the queue.
+Release a job back into the queue.
 
 ```common-lisp
 ;; definition
@@ -197,7 +197,7 @@ Release a job back inot the queue.
 ```
 
 ### bury
-Bury a message.
+Bury a job.
 
 ```common-lisp
 ;; definition
@@ -214,3 +214,202 @@ Bury a message.
 ;; finish-cb definition
 (lambda (socket status) ...)
 ```
+
+### touch
+Refresh the `ttr` value on a job.
+
+```common-lisp
+;; definition
+(touch id &key ...)
+
+;; finish-cb definition
+(lambda (socket status) ...)
+```
+
+### watch
+Watch a tube.
+
+```common-lisp
+;; definition
+(watch tube &key ...)
+
+;; finish-cb definition
+(lambda (socket status number-of-watched-tubes) ...)
+```
+
+### ignore
+Ignore a tube, opposite of [watch](#watch).
+
+```common-lisp
+;; definition
+(ignore tube &key ...)
+
+;; finish-cb defintiion
+(lambda (socket status number-of-watched-tubes) ...)
+```
+
+### peek
+Get a job by id (without reserving).
+
+```common-lisp
+;; definition
+(peek id &key ...)
+
+;; example
+(peek 140
+  :finish-cb (lambda (sock status id data)
+               (format t "found job: ~s~%" (babel:octets-to-string data))))
+
+;; finish-cb definition
+(lambda (socket status job-id job-data) ...)
+```
+
+### peek-ready
+Get the next ready job (without reserving).
+
+```common-lisp
+;; definition
+(peek-ready &key ...)
+
+;; finish-cb definition
+(lambda (socket status job-id job-data) ...)
+```
+
+### peek-delayed
+Get the next delayed job (without reserving).
+
+```common-lisp
+;; definition
+(peek-delayed &key ...)
+
+;; finish-cb definition
+(lambda (socket status job-id job-data) ...)
+```
+
+### peek-buried
+Get the next buried job (without reserving).
+
+```common-lisp
+;; definition
+(peek-buried &key ...)
+
+;; finish-cb definition
+(lambda (socket status job-id job-data) ...)
+```
+
+### kick
+Kick a number of buried jobs.
+
+```common-lisp
+;; definition
+(kick bound &key ...)
+
+;; finish-cb definition
+(lambda (socket status number-kicked-jobs) ...)
+```
+
+### kick-job
+Kick a specific job by id.
+
+```common-lisp
+;; definition
+(kick-job id &key ...)
+
+;; finish-cb definition
+(lambda (socket status) ...)
+```
+
+### stats-job
+Get extra information about a job.
+
+```common-lisp
+;; definition
+(stats-job id &key ...)
+
+;; finish-cb defintion
+(lambda (socket status stats-plist) ...)
+```
+
+### stats-tube
+Get information about a tube.
+
+```common-lisp
+;; definition
+(stats-tube tube &key ...)
+
+;; finish-cb definition
+(lambda (socket status stats-plist) ...)
+```
+
+### stats
+Get server stats.
+
+```common-lisp
+;; definition
+(stats &key ...)
+
+;; finish-cb definition
+(lambda (socket status stats-plist) ...)
+```
+
+### list-tubes
+List all tubes.
+
+```common-lisp
+;; definition
+(list-tubes &key ...)
+
+;; finish-cb definition
+(lambda (socket status list-of-tube-names) ...)
+```
+
+### list-tubes-used
+List used tubes.
+
+```common-lisp
+;; definition
+(list-tubes-used &key ...)
+
+;; finish-cb definition
+(lambda (socket status list-of-tube-names) ...)
+```
+
+### list-tubes-watched
+List watched tubes.
+
+```common-lisp
+;; definition
+(list-tubes-watched &key ...)
+
+;; finish-cb definition
+(lambda (socket status list-of-tube-names) ...)
+```
+
+### quit
+End the current connection/session. This closes the given socket (on the
+beanstalkd end), so any given `finish-cb` will generally not be called.
+
+```common-lisp
+;; definition
+(quit &key ...)
+
+;; example
+(reserve
+  :finish-cb (lambda (sock status id data)
+               (process-job id data)
+               (quit :socket sock)))
+
+```
+
+### pause-tube
+Pause a tube for the specified number of seconds.
+
+```common-lisp
+;; definition
+(pause-tube tube delay &key ...)
+
+;; finish-cb definition
+(lambda (socket status) ...)
+```
+
+
