@@ -11,7 +11,7 @@
         (cdr alias)
         fn-name)))
 
-(defmacro defcommand (fn-name args &key sends-data format-cb possible-errors)
+(defmacro defcommand (fn-name args &key sends-data format-cb)
   "Makes creating new commands stupid easy."
   `(progn
      (defun ,fn-name
@@ -23,7 +23,6 @@
                             :args args
                             ,@(when sends-data '(:data data))
                             ,@(when format-cb `(:format-cb ,format-cb))
-                            ,@(when possible-errors `(:possible-errors ,possible-errors))
                             :finish-cb finish-cb
                             :event-cb event-cb
                             :write-cb write-cb
