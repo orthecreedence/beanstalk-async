@@ -1,6 +1,10 @@
 beanstalk-async - Asynchronous beanstalkd driver for Common Lisp
 ================================================================
-Requires [cl-async](https://github.com/orthecreedence/cl-async).
+This is a driver to communication asynchronously with a beastalkd server in
+Common Lisp. It requires [cl-async](https://github.com/orthecreedence/cl-async).
+
+This library is currently in *alpha*, so please don't use it for production
+until all the bugs/issues are ironed out.
 
 Commands
 --------
@@ -412,4 +416,9 @@ Pause a tube for the specified number of seconds.
 (lambda (socket status) ...)
 ```
 
+Notes
+-----
+This library was built as part of an effort to make asynchronous programming in
+Common Lisp a viable option.
 
+It is licensed MIT.
