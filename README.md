@@ -2,9 +2,9 @@ beanstalk-async
 ===============
 This library requires [cl-async](https://github.com/orthecreedence/cl-async).
 
-This is a driver to communication asynchronously with a beastalkd server in
-Common Lisp.  It's currently in *alpha*, so please don't use it for production
-until all the bugs/issues are ironed out.
+beanstalk-async is a driver to communication asynchronously with a beastalkd
+server in Common Lisp.  It's currently in *alpha*, so please don't use it for
+production until all the bugs/issues are ironed out.
 
 Commands
 --------
