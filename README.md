@@ -2,9 +2,8 @@ beanstalk-async
 ===============
 This is a driver to communication asynchronously with a beastalkd server in
 Common Lisp. It requires [cl-async](https://github.com/orthecreedence/cl-async).
-
-This library is currently in *alpha*, so please don't use it for production
-until all the bugs/issues are ironed out.
+It's currently in *alpha*, so please don't use it for production until all the
+bugs/issues are ironed out.
 
 Commands
 --------
@@ -435,6 +434,7 @@ key/value data, or a list for array data.
 Notes
 -----
 This library was built as part of an effort to make asynchronous programming in
-Common Lisp a viable option.
+Common Lisp a viable option. It is built on top of
+[cl-async](https://github.com/orthecreedence/cl-async).
 
 It is licensed MIT.
