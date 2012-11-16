@@ -15,60 +15,62 @@
   "Makes creating new commands stupid easy."
   `(progn
      (defun ,fn-name
-            ,(append args
+            ,(append '(socket) args
                      (when sends-data '(data))
-                     `(&key finish-cb event-cb write-cb socket (read-timeout ,default-read-timeout) (host "127.0.0.1") (port 11300)))
+                     `(&key write-cb (read-timeout ,default-read-timeout)))
        (let ((args (list ,@args)))
          (beanstalk-command (string-downcase (string (find-command-alias ',fn-name)))
                             :args args
                             ,@(when sends-data '(:data data))
                             ,@(when format-cb `(:format-cb ,format-cb))
-                            :finish-cb finish-cb
-                            :event-cb event-cb
                             :write-cb write-cb
                             :socket socket
-                            :read-timeout read-timeout
-                            :host host
-                            :port port)))
+                            :read-timeout read-timeout)))
      (export ',fn-name :beanstalk-async)))
 
 ;; -----------------------------------------------------------------------------
 ;; define commands used for formatting data returned from beanstalk
 ;; TODO: code duplication runs rampant. fix.
 ;; -----------------------------------------------------------------------------
-(defun format-with-status-id-data (finish-cb socket command header response)
+(defun format-with-status-id-data (future command header response)
   "Grab the ID from the header and the data (if any) and send them into the
    data arg of the finish-cb."
   (declare (ignore command))
   (let ((id (getf header :id))
         (status (convert-to-keyword (getf header :header))))
-    (funcall finish-cb socket status id response)))
+    (finish future status id response)))
 
-(defun format-with-status-id (finish-cb socket command header response)
+(defun format-with-status-id (future command header response)
   "Grab a status heder and id from resulting command."
   (declare (ignore command response))
   (let ((status (convert-to-keyword (getf header :header)))
         (id (getf header :id)))
-    (funcall finish-cb socket status id)))
+    (finish future status id)))
 
-(defun format-with-status-count (finish-cb socket command header response)
+(defun format-with-count (future command header response)
+  "Grab a status header and count from resulting command."
+  (declare (ignore command response))
+  (let ((count (getf header :count)))
+    (finish future count)))
+
+(defun format-with-status-count (future command header response)
   "Grab a status header and count from resulting command."
   (declare (ignore command response))
   (let ((status (convert-to-keyword (getf header :header)))
         (count (getf header :count)))
-    (funcall finish-cb socket status count)))
+    (finish future status count)))
 
-(defun format-with-status (finish-cb socket command header response)
+(defun format-with-status (future command header response)
   "Just pass whatever header through as a status update, ignoring data."
   (declare (ignore command response))
-  (funcall finish-cb socket (convert-to-keyword (getf header :header))))
+  (finish future (convert-to-keyword (getf header :header))))
 
-(defun format-yaml (finish-cb socket command header response)
+(defun format-yaml (future command header response)
   "Format a YAML response from beanstalk."
-  (funcall finish-cb
-           socket
-           (convert-to-keyword (getf header :header)) 
-           (parse-beanstalk-yaml (babel:octets-to-string response :encoding :utf-8))))
+  (declare (ignore command))
+  (finish future
+          (convert-to-keyword (getf header :header)) 
+          (parse-beanstalk-yaml (babel:octets-to-string response :encoding :utf-8))))
 
 ;; -----------------------------------------------------------------------------
 ;; define all the commands and specify the function used to format the data they
@@ -88,7 +90,7 @@
 (defcommand release (id priority delay) :format-cb #'format-with-status)
 (defcommand bury (id priority) :format-cb #'format-with-status)
 (defcommand touch (id) :format-cb #'format-with-status)
-(defcommand watch (tube) :format-cb #'format-with-status-count)
+(defcommand watch (tube) :format-cb #'format-with-count)
 (defcommand ignore (tube) :format-cb #'format-with-status-count)
 (defcommand peek (id) :format-cb #'format-with-status-id-data)
 (defcommand peek-ready nil :format-cb #'format-with-status-id-data)

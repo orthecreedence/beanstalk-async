@@ -1,7 +1,9 @@
 (defpackage :beanstalk-async
-  (:use #:cl)
+  (:use #:cl #:cl-async-future)
   (:nicknames #:bas)
-  (:export #:beanstalk-command
+  (:export #:connect
+           #:disconnect
+           #:beanstalk-command
            #:parse-beanstalk-yaml))
 (in-package :beanstalk-async)
 
@@ -47,7 +49,7 @@
           for c across str do
       (when (char= c #\_)
         (setf (aref str i) #\-)))
-    (read-from-string (format nil ":~a" str))))
+    (intern str :keyword)))
 
 (defun append-array (arr1 arr2)
   "Create an array, made up of arr1 followed by arr2."
@@ -147,7 +149,17 @@
           (setf data-arr nil))
         (apply #'values finishedp)))))
 
-(defun beanstalk-command (command &key args format-cb finish-cb event-cb write-cb data socket (read-timeout 5) (host "127.0.0.1") (port 11300))
+(defun connect (host port &key (read-timeout 5))
+  "Return a connection to a beanstalk server."
+  (as:tcp-send host port nil nil nil :read-timeout read-timeout))
+
+(defun disconnect (socket)
+  "Close a beanstalk connection."
+  (unless (as:socket-closed-p socket)
+    (as:close-socket socket)
+    t))
+
+(defun beanstalk-command (command &key args format-cb write-cb data socket (read-timeout 5))
   "Send a command to beanstalk asynchronously. If a connection is passed, it
    uses that instead of opening a new one."
   ;; build the command
@@ -180,26 +192,22 @@
     ;; now make a beanstalk parser, which can recieve data in multiple chunks,
     ;; and run our command asynchronously.
     (let* ((parser (make-beanstalk-parser))
+           (future (make-future))
+           (event-cb (lambda (ev) (signal-event future ev)))
            (read-cb (lambda (socket data)
                       (multiple-value-bind (finishedp header response) (funcall parser data)
-                        (when (and finishedp finish-cb)
+                        (when finishedp
                           ;; disable the bufferevent timeout so we can process the command
                           (as:disable-socket socket :read t :write t)
                           ;; we got a full response, either format it or send it
                           ;; straight to the finish-cb
                           (if format-cb
-                              (funcall format-cb finish-cb socket command header response)
-                              (funcall finish-cb socket (list :header header :data response))))))))
-      (if socket
-          (progn
-            (as:set-socket-timeouts socket read-timeout nil)
-            (as:write-socket-data socket cmd
-                                  :read-cb read-cb
-                                  :event-cb event-cb
-                                  :write-cb write-cb))
-          (as:tcp-send host port
-                       cmd
-                       read-cb event-cb
-                       :read-timeout read-timeout
-                       :write-cb write-cb)))))
+                              (funcall format-cb future command header response)
+                              (finish future (list :header header :data response))))))))
+      (as:set-socket-timeouts socket read-timeout nil)
+      (as:write-socket-data socket cmd
+                            :read-cb read-cb
+                            :event-cb event-cb
+                            :write-cb write-cb)
+      future)))
 
