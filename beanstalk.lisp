@@ -149,9 +149,9 @@
           (setf data-arr nil))
         (apply #'values finishedp)))))
 
-(defun connect (host port &key (read-timeout 5))
+(defun connect (host port &key (read-timeout 5) event-cb)
   "Return a connection to a beanstalk server."
-  (as:tcp-send host port nil nil nil :read-timeout read-timeout))
+  (as:tcp-send host port nil nil event-cb :read-timeout read-timeout))
 
 (defun disconnect (socket)
   "Close a beanstalk connection."

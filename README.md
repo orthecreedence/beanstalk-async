@@ -6,6 +6,11 @@ beanstalk-async is a driver to communicate asynchronously with a beastalkd
 server in Common Lisp.  It's currently in *alpha*, so please don't use it for
 production until all the bugs/issues are ironed out.
 
+Important note
+--------------
+This library was recently converted to use [cl-async's futures](http://orthecreedence.github.com/cl-async/future)
+and the command documenation below is __WRONG__. Don't use this library yet.
+
 Commands
 --------
 All commands take the following keyword arguments, and so are not documented
