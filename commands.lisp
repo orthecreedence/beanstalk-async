@@ -65,7 +65,7 @@
   (declare (ignore command response))
   (finish future (convert-to-keyword (getf header :header))))
 
-(defun format-yaml (future command header response)
+(defun format-with-status-yaml (future command header response)
   "Format a YAML response from beanstalk."
   (declare (ignore command))
   (finish future
@@ -98,12 +98,12 @@
 (defcommand peek-buried nil :format-cb #'format-with-status-id-data)
 (defcommand kick (bound) :format-cb #'format-with-status-count)
 (defcommand kick-job (id) :format-cb #'format-with-status)
-(defcommand stats-job (id) :format-cb #'format-yaml)
-(defcommand stats-tube (tube) :format-cb #'format-yaml)
-(defcommand stats nil :format-cb #'format-yaml)
-(defcommand list-tubes nil :format-cb #'format-yaml)
-(defcommand list-tubes-used nil :format-cb #'format-yaml)
-(defcommand list-tubes-watched nil :format-cb #'format-yaml)
+(defcommand stats-job (id) :format-cb #'format-with-status-yaml)
+(defcommand stats-tube (tube) :format-cb #'format-with-status-yaml)
+(defcommand stats nil :format-cb #'format-with-status-yaml)
+(defcommand list-tubes nil :format-cb #'format-with-status-yaml)
+(defcommand list-tubes-used nil :format-cb #'format-with-status-yaml)
+(defcommand list-tubes-watched nil :format-cb #'format-with-status-yaml)
 (defcommand quit nil)
 (defcommand pause-tube (tube delay) :format-cb #'format-with-status)
 
