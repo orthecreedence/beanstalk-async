@@ -151,7 +151,17 @@
 
 (defun connect (host port &key (read-timeout 5) event-cb)
   "Return a connection to a beanstalk server."
-  (as:tcp-connect host port nil event-cb :read-timeout read-timeout))
+  (let ((future (make-future))
+        (sock nil))
+    (as:delay
+      (lambda ()
+        (finish future sock)))
+    (set-event-handler future event-cb)
+    (setf sock (as:tcp-connect host port
+                 nil
+                 (lambda (ev) (signal-event future ev))
+                 :read-timeout read-timeout))))
+>>>>>>> d4899467c149a8b8bc80268eba0ab8db3d504470
 
 (defun disconnect (socket)
   "Close a beanstalk connection."
