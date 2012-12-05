@@ -151,7 +151,7 @@
 
 (defun connect (host port &key (read-timeout 5) event-cb)
   "Return a connection to a beanstalk server."
-  (as:tcp-send host port nil nil event-cb :read-timeout read-timeout))
+  (as:tcp-connect host port nil event-cb :read-timeout read-timeout))
 
 (defun disconnect (socket)
   "Close a beanstalk connection."
