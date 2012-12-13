@@ -161,7 +161,6 @@
                  nil
                  (lambda (ev) (signal-event future ev))
                  :read-timeout read-timeout))))
->>>>>>> d4899467c149a8b8bc80268eba0ab8db3d504470
 
 (defun disconnect (socket)
   "Close a beanstalk connection."
