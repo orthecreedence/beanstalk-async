@@ -149,17 +149,16 @@
           (setf data-arr nil))
         (apply #'values finishedp)))))
 
-(defun connect (host port &key (read-timeout 5) event-cb)
+(defun connect (host port &key (read-timeout 5))
   "Return a connection to a beanstalk server."
   (let ((future (make-future))
         (sock nil))
     (as:delay
       (lambda ()
         (finish future sock)))
-    (set-event-handler future event-cb)
     (setf sock (as:tcp-connect host port
                  nil
-                 (lambda (ev) (signal-event future ev))
+                 (lambda (ev) (signal-error future ev))
                  :read-timeout read-timeout))))
 
 (defun disconnect (socket)
@@ -202,7 +201,7 @@
     ;; and run our command asynchronously.
     (let* ((parser (make-beanstalk-parser))
            (future (make-future))
-           (event-cb (lambda (ev) (signal-event future ev)))
+           (event-cb (lambda (ev) (signal-error future ev)))
            (read-cb (lambda (socket data)
                       (multiple-value-bind (finishedp header response) (funcall parser data)
                         (when finishedp
